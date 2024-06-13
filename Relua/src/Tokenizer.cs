@@ -125,9 +125,13 @@ namespace Relua {
         }
 
         public string ReadQuoted(out Region reg) {
-            if (CurChar != '"' && CurChar != '\'') Throw($"Expected quoted string");
+            if (CurChar != '"' && CurChar != '\'' && CurChar != '[') Throw($"Expected quoted string");
             var is_single_quote = CurChar == '\'';
+            var is_double_quote = CurChar == '"';
+            var is_brackets_quote = CurChar == '[';
             Move();
+            if (is_brackets_quote)
+                Move();
             var s = new StringBuilder();
             reg = StartRegion();
             var escaped = false;
@@ -175,7 +179,20 @@ namespace Relua {
                     escaped = true;
                     Move();
                     continue;
-                } else if ((is_single_quote && c == '\'') || (!is_single_quote && c == '"')) {
+                }
+                else if ((is_single_quote && c == '\''))
+                {
+                    Move();
+                    break;
+                }
+                else if ((is_double_quote && c == '"'))
+                {
+                    Move();
+                    break;
+                }
+                else if ((is_brackets_quote && c == ']' && Peek() == ']'))
+                {
+                    Move();
                     Move();
                     break;
                 }
@@ -364,7 +381,7 @@ namespace Relua {
                 } else {
                     return new Token(TokenType.Identifier, val, reg);
                 }
-            } else if (c == '"' || c == '\'') {
+            } else if (c == '"' || c == '\'' || (c == '[' && Peek() == '[')) {
                 Region reg;
                 var val = ReadQuoted(out reg);
                 return new Token(TokenType.QuotedString, val, reg);
